@@ -1,0 +1,4 @@
+Generic:
+$JAVA_HOME/bin/keytool -importcert -alias GMUScheduler -cacerts -file ssbstureg-gmu-edu.pem
+password: changeit
+yes
