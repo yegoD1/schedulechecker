@@ -4,25 +4,36 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+
+import java.net.http.HttpResponse.BodyHandlers;
+import java.util.HashMap;
 import java.util.LinkedList;
+import java.util.Map;
 import java.util.Queue;
-import java.util.Timer;
-import java.util.TimerTask;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
 import javax.swing.ImageIcon;
-import javax.swing.JButton;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
+import javax.swing.Timer;
+
+import org.json.JSONArray;
+import org.json.JSONObject;
 
 import net.miginfocom.swing.MigLayout;
 
+/**
+ * Class that handles outgoing requests for class availability.
+ */
 public class ClassChecker {
 
+    // Actual URL to set search mode.
     private static final String SETSEARCH_URL = "https://ssbstureg.gmu.edu/StudentRegistrationSsb/ssb/term/search";
+    
+    // Actual URL to perform a course search.
     private static final String COURSESEARCH_URL = "https://ssbstureg.gmu.edu/StudentRegistrationSsb/ssb/searchResults/searchResults";
-
-    private static final HttpRequest SETSEARCH_REQUEST;
 
     // Header pairs to always be sent with every request.
     private static final BasicPair<String, String>[] HEADER_PAIRS;
@@ -34,45 +45,58 @@ public class ClassChecker {
         headerPairs[1] = new BasicPair<String,String>("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:131.0) Gecko/20100101 Firefox/131.0");
 
         HEADER_PAIRS = headerPairs;
-
-        @SuppressWarnings("unchecked")
-        BasicPair<String, String>[] setSearchQueryPairs = new BasicPair[1];
-        setSearchQueryPairs[0] = new BasicPair<String,String>("mode", "search");
-
-        SETSEARCH_REQUEST = HttpRequestBuilder.BuildCall(SETSEARCH_URL, setSearchQueryPairs, HEADER_PAIRS, HttpCallType.POST, "term=202510");
     }
 
     // Update rate in seconds.
-    private static final int UPDATE_RATE = 15;
+    private static final int UPDATE_RATE = 5;
 
     // HttpClient to send out requests.
     private HttpClient httpClient;
 
+    // All available class searches to do. A rotating queue.
     private Queue<ClassEntry> jobs;
 
+    // Timer that delays each search request by UPDATE_RATE.
     private Timer taskTimer;
 
+    /**
+     * Constructor for ClassChecker that takes in the current httpClient being used.
+     * @param httpClient HttpClient that is being used by this program.
+     */
     public ClassChecker(HttpClient httpClient)
     {
         this.httpClient = httpClient;
         jobs = new LinkedList<ClassEntry>();
 
         // Create timer that continually updates every UPDATE_RATE seconds.
-        taskTimer = new Timer();
-        taskTimer.schedule(new UpdateClass(), 0, TimeUnit.SECONDS.toMillis(UPDATE_RATE));
+        taskTimer = new Timer((int) TimeUnit.SECONDS.toMillis(UPDATE_RATE), new UpdateClass());
+        taskTimer.stop();
     }
 
-    private class UpdateClass extends TimerTask
+    /**
+     * TimerTask that will perform the class searched by UPDATE_RATE seconds.
+     */
+    private class UpdateClass implements ActionListener
     {
         @Override
-        public void run() {
+        public void actionPerformed(ActionEvent e) {
             ClassEntry entry = jobs.poll();
-            
 
+            entry.performSearch();
+
+            // Re-add into queue at end.
             jobs.add(entry);
         }
     }
 
+    /**
+     * Adds a new class to be tracked. Will be added to end of the queue.
+     * @param dateCode Date code of the class. Should look something like <code>202510</code> for Spring 2025.
+     * @param classSymbol Symbol of the class. Should match the letters of the class to track. For CS 262 it would be <code>CS</code>.
+     * @param classNum The numbers after the class symbol. For CS 262 it would be <code>262</code>. 
+     * @param classSection Optional section to track. For CS 262-001 it would be <code>001</code>.
+     * @return JPanel to be added to active class tracked list.
+     */
     public JPanel addNewClass(String dateCode, String classSymbol, String classNum, String classSection)
     {
         ClassEntry classEntry = new ClassEntry(dateCode, classSymbol, classNum, classSection);
@@ -80,7 +104,29 @@ public class ClassChecker {
         // Add to pending jobs.
         jobs.add(classEntry);
 
+        // No jobs were added before until now.
+        if(jobs.size() == 1)
+        {
+            taskTimer.setInitialDelay(0);
+            taskTimer.restart();
+        }
+
         return classEntry;
+    }
+
+    /**
+     * Removes a class to track.
+     * @param classToRemove Class that wants to be removed.
+     */
+    public void removeClass(JPanel classToRemove)
+    {
+        jobs.remove(classToRemove);
+
+        // Stop timer if there are no more jobs.
+        if(jobs.size() == 0)
+        {
+            taskTimer.stop();
+        }
     }
 
     /**
@@ -89,14 +135,46 @@ public class ClassChecker {
     private class ClassEntry extends JPanel
     {
         private JPanel mainPanel;
-        private JPanel loadingPanel;
-        private JButton removeButton;
 
+        // Label that gets updated each time class capacity is updated.
+        private JLabel classCapacityLabel;
+
+        // HttpRequest to use when wanting to set search mode.
+        private HttpRequest setSearchRequest;
+
+        // HttpRequest to use when wanting to search for a class.
         private HttpRequest classSearchRequest;
 
+        // True if was supplied with a valid section.
+        private boolean hasValidSection;
+
+        //
+        private String classSection;
+
+        /**
+         * Constructor for ClassEntry. Takes same arguments as {@link ClassChecker#addNewClass(String, String, String, String)};
+         * @param dateCode Date code of the class. Should look something like <code>202510</code> for Spring 2025.
+         * @param classSymbol Symbol of the class. Should match the letters of the class to track. For CS 262 it would be <code>CS</code>.
+         * @param classNum The numbers after the class symbol. For CS 262 it would be <code>262</code>. 
+         * @param classSection Optional section to track. For CS 262-001 it would be <code>001</code>.
+         */
         public ClassEntry(String dateCode, String classSymbol, String classNum, String classSection)
         {
             setupPanel(dateCode, classSymbol, classNum, classSection);
+
+            hasValidSection = (classSection != null);
+            this.classSection = classSection;
+
+            // Setup query pairs for set search mode.
+            @SuppressWarnings("unchecked")
+            BasicPair<String, String>[] setSearchQueryPairs = new BasicPair[1];
+            setSearchQueryPairs[0] = new BasicPair<String,String>("mode", "search");
+    
+            // Must also be sent a body with date user wants to search in.
+            Map<String, String> body = new HashMap<String, String>();
+            body.put("term", dateCode);
+    
+            setSearchRequest = HttpRequestBuilder.BuildCall(SETSEARCH_URL, setSearchQueryPairs, HEADER_PAIRS, HttpCallType.POST, body);
 
             @SuppressWarnings("unchecked")
             BasicPair<String, String>[] queries = new BasicPair[7];
@@ -111,19 +189,13 @@ public class ClassChecker {
             classSearchRequest = HttpRequestBuilder.BuildCall(COURSESEARCH_URL, queries, HEADER_PAIRS, HttpCallType.GET, null);
         }
 
-        public void performSearch()
-        {
-            
-        }
-
-        private class stopTrackingListener implements ActionListener
-        {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                
-            }
-        }
-
+        /**
+         * Sets up the panel for display. For more explanation on parameters, see {@link #ClassEntry}.
+         * @param dateCode Date code of this class.
+         * @param classSymbol Symbol of this class
+         * @param classNum The numbers after the class symbol.
+         * @param classSection Optional section to track.
+         */
         public void setupPanel(String dateCode, String classSymbol, String classNum, String classSection)
         {
             mainPanel = new JPanel(new MigLayout("fillx, debug"));
@@ -143,29 +215,71 @@ public class ClassChecker {
             JLabel className = new JLabel(classSymbol + " " + classNum);
             mainPanel.add(className, "growx");
     
-            JLabel classCapacity = new JLabel("0/0");
-            mainPanel.add(classCapacity, "growx");
+            classCapacityLabel = new JLabel("0/0");
 
-            removeButton = new JButton("Stop Tracking");
-            removeButton.addActionListener(new stopTrackingListener());
-            mainPanel.add(removeButton, "growx");
+            if(classSection == null)
+            {
+                classCapacityLabel.setText("Multi-Section");
+            }
+            
+            mainPanel.add(classCapacityLabel, "growx");
 
             add(mainPanel);
         }
 
-        public HttpRequest getHttpRequest()
+        /**
+         * Performs the actual internet search using the HttpClient. Will first set search mode and then perform actual search.
+         */
+        public void performSearch()
         {
-            return classSearchRequest;
+            // First set search mode to setup session.
+            CompletableFuture<HttpResponse<String>> response = httpClient.sendAsync(setSearchRequest, BodyHandlers.ofString());
+            response.thenAccept(result -> classQuerySearch(result));
         }
 
-        public void setMaxCapacity(int maxCapacity)
+        /**
+         * Performs query to get class data.
+         */
+        private void classQuerySearch(HttpResponse<String> response)
         {
-
+            CompletableFuture<HttpResponse<String>> queryResponse = httpClient.sendAsync(classSearchRequest, BodyHandlers.ofString());
+            queryResponse.thenAccept(result -> updateEntry(result));
         }
 
-        public void setCurrentCapacity(int capacity)
+        private void updateEntry(HttpResponse<String> bodyResponse)
         {
+            JSONObject object = new JSONObject(bodyResponse.body());
+            System.out.println(object);
 
+            JSONArray dataArray = object.getJSONArray("data");
+            for(int i = 0; i < dataArray.length(); i++)
+            {
+                JSONObject entry = dataArray.getJSONObject(i);
+                if(hasValidSection)
+                {
+                    String classSequenceNum = entry.getString("sequenceNumber");
+
+                    if(classSequenceNum.equals(classSection))
+                    {
+                        int seatsAvailable = entry.getInt("enrollment");
+                        int maxSize = entry.getInt("maximumEnrollment");
+                        
+                        updateCapacity(seatsAvailable, maxSize);
+                    }
+                }
+                else
+                {
+                    int maxSize = entry.getInt("maximumEnrollment");
+                    int seatsAvailable = entry.getInt("seatsAvailable");
+
+                    // Update status if available.
+                }
+            }
+        }
+
+        private void updateCapacity(int takenSeats, int maxSeats)
+        {
+            classCapacityLabel.setText(takenSeats + "/" + maxSeats);
         }
     }
 }

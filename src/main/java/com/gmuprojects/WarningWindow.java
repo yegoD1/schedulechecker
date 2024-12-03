@@ -9,12 +9,21 @@ import javax.swing.plaf.DimensionUIResource;
 
 import net.miginfocom.swing.MigLayout;
 
+/**
+ * WarningWindow is a JFrame that should be used for one off errors to display to the user.
+ */
 public class WarningWindow extends JFrame {
 
+    // Main panel of this frame.
     private JPanel mainPanel;
 
+    // The text that will be displayed in the error window.
     private JTextArea warningTextArea;
 
+    /**
+     * Constructor for WarningWindow. Will display window on creation with given warningText.
+     * @param warningText The text to display within the window, usually an error message.
+     */
     public WarningWindow(String warningText)
     {
         setDefaultCloseOperation(DISPOSE_ON_CLOSE);

@@ -1,5 +1,7 @@
 package com.gmuprojects;
 
+import java.awt.BorderLayout;
+import java.awt.Color;
 import java.awt.Font;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -12,10 +14,8 @@ import java.net.http.HttpClient.Redirect;
 import java.net.http.HttpClient.Version;
 import java.net.http.HttpResponse.BodyHandlers;
 import java.time.Duration;
-import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
-import javax.swing.BoxLayout;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
 import javax.swing.JFrame;
@@ -23,6 +23,7 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTextField;
+import javax.swing.border.Border;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -30,18 +31,25 @@ import org.json.JSONObject;
 import net.miginfocom.layout.CC;
 import net.miginfocom.swing.MigLayout;
 
+/**
+ * Mainframe is of type JFrame that is to be used to display the main program UI.
+ */
 public class MainFrame extends JFrame{
 
+    // Actual URL to use to query class terms.
     private static final String TERM_URL = "https://ssbstureg.gmu.edu/StudentRegistrationSsb/ssb/classSearch/getTerms";
 
+    // HttpRequest object to be used when querying for available class terms.
     private static final HttpRequest TERM_REQUEST;
 
     static{
+        // Constructs reusable header pairs to be sent with every request.
         @SuppressWarnings("unchecked")
         BasicPair<String, String>[] headerPairs = new BasicPair[2];
         headerPairs[0] = new BasicPair<String,String>("Accept", "*/*");
         headerPairs[1] = new BasicPair<String,String>("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:131.0) Gecko/20100101 Firefox/131.0");
 
+        // Constructs query pairs to be used when getting available terms.
         @SuppressWarnings("unchecked")
         BasicPair<String, String>[] termQueryPairs = new BasicPair[2];
         termQueryPairs[0] = new BasicPair<String,String>("offset", "1");
@@ -52,6 +60,9 @@ public class MainFrame extends JFrame{
 
     // Main panel for this application.
     private JPanel mainPanel;
+
+    // Label shown on startup before intial requests are completed.
+    private JLabel loadingLabel;
 
     // Date picker to select date range for classes.
     private JComboBox<ClassDateCode> classDatePicker;
@@ -81,22 +92,25 @@ public class MainFrame extends JFrame{
 
     private CookieManager cookieManager;
 
+    /**
+     * Default constructor for MainFrame. Called when program is first ran.
+     * @throws Exception
+     */
     public MainFrame() throws Exception
     {
         // Construct all elements to be added to this frame.
         setupPanel();
         add(mainPanel);
 
-        // Handle cookies for JSESSION.
-        cookieManager = new CookieManager();
-        CookieHandler.setDefault(cookieManager);
+        // Disable until inital load happens (prevents clicking and interacting).
+        setEnabled(false);
 
         // Construct http client to use for http requests.
         httpClient = HttpClient.newBuilder()
             .version(Version.HTTP_1_1)
             .followRedirects(Redirect.NORMAL)
             .connectTimeout(Duration.ofSeconds(10))
-            .cookieHandler(CookieHandler.getDefault())
+            .cookieHandler(new CookieManager())
             .build();
 
         try{
@@ -111,99 +125,24 @@ public class MainFrame extends JFrame{
         classChecker = new ClassChecker(httpClient);
     }
 
-    private class ClassDateCode
-    {
-        private int code;
-        private String description;
-
-        public ClassDateCode(int code, String description)
-        {
-            this.code = code;
-            this.description = description;
-        }
-
-        public int getCode()
-        {
-            return code;
-        }
-
-        public String getDescription()
-        {
-            return description;
-        }
-
-        @Override
-        public String toString()
-        {
-            return description;
-        }
-    }
-
-    private void onTermsRecieved(HttpResponse<String> response)
-    {
-        JSONArray jsonArray = new JSONArray(response.body());
-
-        fillDatePicker(jsonArray);
-    }
-
-    private void fillDatePicker(JSONArray responseArray)
-    {
-        for(int i = 0; i < responseArray.length(); i++)
-        {
-            JSONObject obj = responseArray.getJSONObject(i);
-            int codeValue = obj.getInt("code");
-            String description = obj.getString("description");
-
-            // Filter out view only dates.
-            if(!description.contains("(View Only)"))
-            {
-                classDatePicker.addItem(new ClassDateCode(codeValue, description));
-            }
-        }
-    }
-
-    private class addClassListener implements ActionListener
-    {
-        @Override
-        public void actionPerformed(ActionEvent event) {
-            System.out.println("Adding Class...");
-
-            ClassDateCode code = (ClassDateCode) classDatePicker.getSelectedItem();
-
-            try
-            {
-                String classSec = null;
-
-                // Keep classSec null if there is no text.
-                if(!classSecText.getText().isEmpty())
-                {
-                    classSec = classSecText.getText();
-                }
-                
-                // Add to tracker panel (which lists all actively tracked classes).
-                JPanel classTrackerPanel = classChecker.addNewClass(Integer.toString(code.getCode()), classSymbolText.getText(), classNumText.getText(), classSec);
-
-                // Add to visible class list.
-                classList.add(classTrackerPanel,  "wrap");
-                revalidate();
-            }
-            catch (NullPointerException exception)
-            {
-                new WarningWindow(exception.toString());
-            }
-        }
-    }
-
+    /**
+     * Sets up all the panel elements to display for the user.
+     */
     private void setupPanel()
     {
         // Use custom layout.
         mainPanel = new JPanel(new MigLayout("fillx, debug"));
 
-        JLabel titleLabel = new JLabel("GMU Class Availability Checker");
-        titleLabel.setFont(new Font("Arial", Font.PLAIN, 24));
-
         CC centerConstraint = new CC();
         centerConstraint.alignX("center").spanX().wrap();
+
+        loadingLabel = new JLabel("Loading...");
+        loadingLabel.setFont(new Font("Arial", Font.ITALIC, 24));
+
+        mainPanel.add(loadingLabel, centerConstraint);
+
+        JLabel titleLabel = new JLabel("GMU Class Availability Checker");
+        titleLabel.setFont(new Font("Arial", Font.PLAIN, 24));
 
         // Title at top of the window.
         mainPanel.add(titleLabel, centerConstraint);
@@ -213,7 +152,7 @@ public class MainFrame extends JFrame{
 
         // Date picker for classes.
         classDatePicker = new JComboBox<ClassDateCode>();
-        classDatePicker.setEditable(true);
+        classDatePicker.setEditable(false);
 
         mainPanel.add(classDatePicker);
 
@@ -245,7 +184,145 @@ public class MainFrame extends JFrame{
 
         classList = new JPanel(new MigLayout("fillx, debug"));
 
-        //classScrollPane = new JScrollPane(classList);
-        mainPanel.add(classList, "growx, span");
+        classScrollPane = new JScrollPane(classList);
+        mainPanel.add(classScrollPane, "growx, span");
+    }
+
+    /**
+     * Called when available terms are recieved from http request. Also clears out loading text.
+     * @param response Actual response message. Should be a JSON array.
+     */
+    private void onTermsRecieved(HttpResponse<String> response)
+    {
+        JSONArray jsonArray = new JSONArray(response.body());
+        fillDatePicker(jsonArray);
+
+        // Enable frame now since dates are loaded.
+        setEnabled(true);
+        mainPanel.remove(loadingLabel);
+    }
+
+    /**
+     * Called after <code>onTermsRecieved</code> to fill out the dropdown date picker.
+     * @param responseArray Array received from terms query.
+     * @see onTermsRecieved
+     */
+    private void fillDatePicker(JSONArray responseArray)
+    {
+        for(int i = 0; i < responseArray.length(); i++)
+        {
+            JSONObject obj = responseArray.getJSONObject(i);
+            int codeValue = obj.getInt("code");
+            String description = obj.getString("description");
+
+            // Filter out view only dates.
+            if(!description.contains("(View Only)"))
+            {
+                classDatePicker.addItem(new ClassDateCode(codeValue, description));
+            }
+        }
+    }
+
+    /**
+     * Internal class to easily put together data for a term the user can select.
+     */
+    private class ClassDateCode
+    {
+        private int code;
+        private String description;
+
+        public ClassDateCode(int code, String description)
+        {
+            this.code = code;
+            this.description = description;
+        }
+
+        public int getCode()
+        {
+            return code;
+        }
+
+        public String getDescription()
+        {
+            return description;
+        }
+
+        @Override
+        public String toString()
+        {
+            return description;
+        }
+    }
+
+    /**
+     * ActionListener that is called whenever a class is wanting to be removed.
+     */
+    private class removeClassListener implements ActionListener
+    {
+        @Override
+        public void actionPerformed(ActionEvent e) {
+            JPanel owningPanel = (JPanel) ((JButton) e.getSource()).getParent();
+            classChecker.removeClass((JPanel) owningPanel.getComponent(0));
+            classList.remove(owningPanel);
+            revalidate();
+            repaint();
+        }
+    }
+
+    /**
+     * ActionListener that is called whenever the user wants to add a class to be tracked.
+     */
+    private class addClassListener implements ActionListener
+    {
+        @Override
+        public void actionPerformed(ActionEvent event) {
+            System.out.println("Adding Class...");
+
+            ClassDateCode code = (ClassDateCode) classDatePicker.getSelectedItem();
+
+            if(classSymbolText.getText().isEmpty())
+            {
+                new WarningWindow("Class symbol field is empty. Please fill out before adding a class. For CS 262 you would type CS.");
+                return;
+            }
+            if(classNumText.getText().isEmpty())
+            {
+                new WarningWindow("Class number field is empty. Please fill out before adding a class. For CS 262 you would type 262.");
+                return;
+            }
+
+            try
+            {
+                String classSec = null;
+
+                // Keep classSec null if there is no text.
+                if(!classSecText.getText().isEmpty())
+                {
+                    classSec = classSecText.getText();
+                }
+
+                JPanel mainEntry = new JPanel(new MigLayout());
+                
+                // Add to tracker panel (which lists all actively tracked classes).
+                JPanel classTrackerPanel = classChecker.addNewClass(Integer.toString(code.getCode()), classSymbolText.getText(), classNumText.getText(), classSec);
+
+                mainEntry.add(classTrackerPanel);
+
+                JButton stopTrackingButton = new JButton("Stop Tracking");
+                stopTrackingButton.addActionListener(new removeClassListener());
+
+                mainEntry.add(stopTrackingButton);
+
+                // Add to visible class list.
+                classList.add(mainEntry, "wrap");
+                
+                revalidate();
+                repaint();
+            }
+            catch (NullPointerException exception)
+            {
+                new WarningWindow(exception.toString());
+            }
+        }
     }
 }

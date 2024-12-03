@@ -2,7 +2,14 @@ package com.gmuprojects;
 
 import java.net.http.HttpRequest;
 import java.net.URI;
+import java.net.URLEncoder;
 import java.net.http.HttpRequest.Builder;
+
+import java.nio.charset.StandardCharsets;
+
+import java.util.Map;
+import java.util.Optional;
+import java.util.stream.Collectors;
 
 // Call types to use.
 enum HttpCallType
@@ -14,7 +21,16 @@ enum HttpCallType
 
 public class HttpRequestBuilder {
 
-    public static HttpRequest BuildCall(String URL, BasicPair<String,String>[] queries, BasicPair<String, String>[] headers, HttpCallType callType, String body)
+    /**
+     * Constructs an HttpRequest from given parameters.
+     * @param URL The actual URL to call. Make sure there are no queries.
+     * @param queries Array of basic pairs to be added URL as queries. Will automatically format.
+     * @param headers Array of basic pairs to be sent as headers.
+     * @param callType Enum for request type to use.
+     * @param body Optinal argument. Creates a URL encoded form body.
+     * @return
+     */
+    public static HttpRequest BuildCall(String URL, BasicPair<String,String>[] queries, BasicPair<String, String>[] headers, HttpCallType callType, Map<String, String> body)
     {
         Builder httpBuilder = HttpRequest.newBuilder();
         StringBuilder strBuilder = new StringBuilder(URL);
@@ -69,7 +85,15 @@ public class HttpRequestBuilder {
 
         if(body != null)
         {
-            httpBuilder.method(callTypeString, HttpRequest.BodyPublishers.ofString(body));
+            // Taken from https://stackoverflow.com/questions/56728398/java-11-new-http-client-send-post-requests-with-x-www-form-urlencoded-parameter
+            String formBody = body.entrySet()
+                .stream()
+                .map(e -> e.getKey() + "=" + URLEncoder.encode(e.getValue(), StandardCharsets.UTF_8))
+                .collect(Collectors.joining("&"));
+
+            // Set content-type since we are sending a body.
+            httpBuilder.header("Content-Type", "application/x-www-form-urlencoded");
+            httpBuilder.method(callTypeString, HttpRequest.BodyPublishers.ofString(formBody));
         }
         else
         {
