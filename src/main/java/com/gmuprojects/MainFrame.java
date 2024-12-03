@@ -23,7 +23,6 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTextField;
-import javax.swing.border.Border;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -90,8 +89,6 @@ public class MainFrame extends JFrame{
     // HttpClient to send out requests.
     private HttpClient httpClient;
 
-    private CookieManager cookieManager;
-
     /**
      * Default constructor for MainFrame. Called when program is first ran.
      * @throws Exception
@@ -131,7 +128,7 @@ public class MainFrame extends JFrame{
     private void setupPanel()
     {
         // Use custom layout.
-        mainPanel = new JPanel(new MigLayout("fillx, debug"));
+        mainPanel = new JPanel(new MigLayout("fillx"));
 
         CC centerConstraint = new CC();
         centerConstraint.alignX("center").spanX().wrap();
@@ -182,7 +179,7 @@ public class MainFrame extends JFrame{
 
         mainPanel.add(addClassButton, centerConstraint);
 
-        classList = new JPanel(new MigLayout("fillx, debug"));
+        classList = new JPanel(new MigLayout("fillx"));
 
         classScrollPane = new JScrollPane(classList);
         mainPanel.add(classScrollPane, "growx, span");

@@ -8,7 +8,6 @@ import java.net.http.HttpRequest.Builder;
 import java.nio.charset.StandardCharsets;
 
 import java.util.Map;
-import java.util.Optional;
 import java.util.stream.Collectors;
 
 // Call types to use.

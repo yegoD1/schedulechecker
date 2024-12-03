@@ -1,7 +1,11 @@
 package com.gmuprojects;
 
+import java.awt.Color;
+import java.awt.Font;
+import java.awt.Image;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.image.BufferedImage;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
@@ -14,6 +18,7 @@ import java.util.Queue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
+import javax.imageio.ImageIO;
 import javax.swing.ImageIcon;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
@@ -38,6 +43,9 @@ public class ClassChecker {
     // Header pairs to always be sent with every request.
     private static final BasicPair<String, String>[] HEADER_PAIRS;
 
+    // Update rate in seconds.
+    private static final int UPDATE_RATE = 5;
+
     static{
         @SuppressWarnings("unchecked")
         BasicPair<String, String>[] headerPairs = new BasicPair[2];
@@ -46,9 +54,6 @@ public class ClassChecker {
 
         HEADER_PAIRS = headerPairs;
     }
-
-    // Update rate in seconds.
-    private static final int UPDATE_RATE = 5;
 
     // HttpClient to send out requests.
     private HttpClient httpClient;
@@ -73,6 +78,8 @@ public class ClassChecker {
         taskTimer.stop();
     }
 
+    private ClassEntry lastUpdatedEntry;
+
     /**
      * TimerTask that will perform the class searched by UPDATE_RATE seconds.
      */
@@ -81,11 +88,20 @@ public class ClassChecker {
         @Override
         public void actionPerformed(ActionEvent e) {
             ClassEntry entry = jobs.poll();
+            
+            // Clear last updated entry.
+            lastUpdatedEntry.setBackground(Color.LIGHT_GRAY);
 
             entry.performSearch();
 
+            // Highlight current job that got updated.
+            entry.setBackground(new Color(120,120,120));
+
             // Re-add into queue at end.
             jobs.add(entry);
+
+            // Entry is now our lasted updated.
+            lastUpdatedEntry = entry;
         }
     }
 
@@ -107,6 +123,7 @@ public class ClassChecker {
         // No jobs were added before until now.
         if(jobs.size() == 1)
         {
+            lastUpdatedEntry = classEntry;
             taskTimer.setInitialDelay(0);
             taskTimer.restart();
         }
@@ -125,6 +142,7 @@ public class ClassChecker {
         // Stop timer if there are no more jobs.
         if(jobs.size() == 0)
         {
+            lastUpdatedEntry = null;
             taskTimer.stop();
         }
     }
@@ -135,6 +153,9 @@ public class ClassChecker {
     private class ClassEntry extends JPanel
     {
         private JPanel mainPanel;
+
+        // Status icon that is shown to the left of the entry.
+        private JLabel statusIcon;
 
         // Label that gets updated each time class capacity is updated.
         private JLabel classCapacityLabel;
@@ -148,8 +169,11 @@ public class ClassChecker {
         // True if was supplied with a valid section.
         private boolean hasValidSection;
 
-        //
+        // Class section to track.
         private String classSection;
+
+        // True if class is currently available. False if vise-versa.
+        private boolean classAvailable;
 
         /**
          * Constructor for ClassEntry. Takes same arguments as {@link ClassChecker#addNewClass(String, String, String, String)};
@@ -161,6 +185,8 @@ public class ClassChecker {
         public ClassEntry(String dateCode, String classSymbol, String classNum, String classSection)
         {
             setupPanel(dateCode, classSymbol, classNum, classSection);
+
+            classAvailable = true;
 
             hasValidSection = (classSection != null);
             this.classSection = classSection;
@@ -198,30 +224,40 @@ public class ClassChecker {
          */
         public void setupPanel(String dateCode, String classSymbol, String classNum, String classSection)
         {
-            mainPanel = new JPanel(new MigLayout("fillx, debug"));
+            mainPanel = new JPanel(new MigLayout("fillx"));
 
+            // Create loading icon.
             try
             {
-                ImageIcon imageIcon = new ImageIcon(getClass().getResource("resources/loading.gif"));
-                JLabel loadingIcon = new JLabel(imageIcon);
-                loadingIcon.setSize(20, 20);
-                mainPanel.add(loadingIcon);
+                BufferedImage img = ImageIO.read(getClass().getResource("resources/wait.png"));
+                Image scaledImg = img.getScaledInstance(60, 60, Image.SCALE_SMOOTH);
+
+                statusIcon = new JLabel(new ImageIcon(scaledImg));
+                statusIcon.setSize(60, 60);
+
+                mainPanel.add(statusIcon);
             }
             catch (Exception e)
             {
                 new WarningWindow(e.toString());
             }
     
-            JLabel className = new JLabel(classSymbol + " " + classNum);
-            mainPanel.add(className, "growx");
-    
+            // Setup class name and capacity.
+            JLabel className = new JLabel();
             classCapacityLabel = new JLabel("0/0");
+            classCapacityLabel.setFont(new Font("Arial", Font.BOLD, 18));
 
             if(classSection == null)
             {
                 classCapacityLabel.setText("Multi-Section");
+                className.setText(classSymbol + " " + classNum);
             }
-            
+            else
+            {
+                className.setText(classSymbol + " " + classNum + "-" + classSection);
+            }
+
+            mainPanel.add(className, "growx");
             mainPanel.add(classCapacityLabel, "growx");
 
             add(mainPanel);
@@ -246,40 +282,99 @@ public class ClassChecker {
             queryResponse.thenAccept(result -> updateEntry(result));
         }
 
+        /**
+         * Updates the entry from recieved class lookup.
+         * @param bodyResponse
+         */
         private void updateEntry(HttpResponse<String> bodyResponse)
         {
             JSONObject object = new JSONObject(bodyResponse.body());
-            System.out.println(object);
 
+            // Response comes with a large "data" array.
             JSONArray dataArray = object.getJSONArray("data");
             for(int i = 0; i < dataArray.length(); i++)
             {
                 JSONObject entry = dataArray.getJSONObject(i);
                 if(hasValidSection)
                 {
+                    // If user is looking for a specific section.
                     String classSequenceNum = entry.getString("sequenceNumber");
 
                     if(classSequenceNum.equals(classSection))
                     {
-                        int seatsAvailable = entry.getInt("enrollment");
+                        // Found the specific class.
+                        int seatsTaken = entry.getInt("enrollment");
                         int maxSize = entry.getInt("maximumEnrollment");
                         
-                        updateCapacity(seatsAvailable, maxSize);
+                        updateCapacity(seatsTaken, maxSize);
+                        if(seatsTaken < maxSize && !classAvailable)
+                        {
+                            changeStatus(true);
+                        }
+                        else if(classAvailable)
+                        {
+                            changeStatus(false);
+                        }
                     }
                 }
                 else
                 {
+                    // If user is looking for any section.
+                    int seatsTaken = entry.getInt("enrollment");
                     int maxSize = entry.getInt("maximumEnrollment");
-                    int seatsAvailable = entry.getInt("seatsAvailable");
+                    
+                    // Only care about one class that has availability.
+                    if(seatsTaken < maxSize)
+                    {
+                        if(!classAvailable)
+                        {
+                            changeStatus(true);
+                        }
 
-                    // Update status if available.
+                        return;
+                    }
                 }
+            }
+
+            if(!hasValidSection && classAvailable)
+            {
+                // No classes were found.
+                changeStatus(false);
             }
         }
 
         private void updateCapacity(int takenSeats, int maxSeats)
         {
             classCapacityLabel.setText(takenSeats + "/" + maxSeats);
+        }
+
+        /**
+         * Changes the status of this entry.
+         * @param isAvailable True if this entry is availble for registration.
+         */
+        private void changeStatus(boolean isAvailable)
+        {
+            try
+            {
+                if(isAvailable)
+                {
+                    BufferedImage img = ImageIO.read(getClass().getResource("resources/success.png"));
+                    Image scaledImg = img.getScaledInstance(statusIcon.getWidth(), statusIcon.getHeight(), Image.SCALE_SMOOTH);
+                    statusIcon.setIcon(new ImageIcon(scaledImg));
+                }
+                else
+                {
+                    BufferedImage img = ImageIO.read(getClass().getResource("resources/failed.png"));
+                    Image scaledImg = img.getScaledInstance(statusIcon.getWidth(), statusIcon.getHeight(), Image.SCALE_SMOOTH);
+                    statusIcon.setIcon(new ImageIcon(scaledImg));
+                }
+            }
+            catch (Exception e)
+            {
+                new WarningWindow(e.toString());
+            }
+
+            classAvailable = isAvailable;
         }
     }
 }
