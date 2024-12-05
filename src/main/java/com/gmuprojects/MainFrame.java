@@ -264,16 +264,50 @@ public class MainFrame extends JFrame{
     }
 
     /**
+     * Checks if given classSymbol is valid. classSymbol must contain only letters.
+     * @param classSymbol Class symbol to validate.
+     * @return True if classSymbol contains only letters.
+     */
+    private boolean isValidClassSymbol(String classSymbol)
+    {
+        for (int i = 0; i < classSymbol.length(); i++) 
+        {
+            char currentChar = classSymbol.charAt(i);
+            if(!Character.isLetter(currentChar))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * Checks if given String number is valid. Must only contain numbers.
+     * @param number Number to validate.
+     * @return True if number contains only numbers.
+     */
+    private boolean isValidNum(String number)
+    {
+        for (int i = 0; i < number.length(); i++) 
+        {
+            char currentChar = number.charAt(i);
+            if(!Character.isDigit(currentChar))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
      * ActionListener that is called whenever the user wants to add a class to be tracked.
      */
     private class addClassListener implements ActionListener
     {
         @Override
         public void actionPerformed(ActionEvent event) {
-            System.out.println("Adding Class...");
-
-            ClassDateCode code = (ClassDateCode) classDatePicker.getSelectedItem();
-
             if(classSymbolText.getText().isEmpty())
             {
                 new WarningWindow("Class symbol field is empty. Please fill out before adding a class. For CS 262 you would type CS.");
@@ -285,6 +319,21 @@ public class MainFrame extends JFrame{
                 return;
             }
 
+            if(!isValidClassSymbol(classSymbolText.getText()))
+            {
+                new WarningWindow("Class symbol is invalid. It should only contain letters.");
+                return;
+            }
+
+            if(!isValidNum(classNumText.getText()))
+            {
+                new WarningWindow("Class number is invalid. It should only contain numbers.");
+                return;
+            }
+
+            System.out.println("Adding Class...");
+            ClassDateCode code = (ClassDateCode) classDatePicker.getSelectedItem();
+
             try
             {
                 String classSec = null;
@@ -293,31 +342,33 @@ public class MainFrame extends JFrame{
                 if(!classSecText.getText().isEmpty())
                 {
                     classSec = classSecText.getText();
+                    if(!isValidNum(classSec))
+                    {
+                        new WarningWindow("Class section is invalid. It should only contain numbers.");
+                        return;
+                    }
                 }
 
                 // Add to tracker panel (which lists all actively tracked classes).
-                try
-                {
-                    JPanel classTrackerPanel = classChecker.addNewClass(Integer.toString(code.getCode()), classSymbolText.getText(), classNumText.getText(), classSec);
-                    JPanel mainEntry = new JPanel(new MigLayout());
+                JPanel classTrackerPanel = classChecker.addNewClass(Integer.toString(code.getCode()), classSymbolText.getText().toUpperCase(), classNumText.getText(), classSec);
+                JPanel mainEntry = new JPanel(new MigLayout());
 
-                    mainEntry.add(classTrackerPanel);
+                mainEntry.add(classTrackerPanel);
 
-                    JButton stopTrackingButton = new JButton("Stop Tracking");
-                    stopTrackingButton.addActionListener(new removeClassListener());
+                JButton stopTrackingButton = new JButton("Stop Tracking");
+                stopTrackingButton.addActionListener(new removeClassListener());
 
-                    mainEntry.add(stopTrackingButton);
+                mainEntry.add(stopTrackingButton);
 
-                    // Add to visible class list.
-                    classList.add(mainEntry, "wrap");
+                // Add to visible class list.
+                classList.add(mainEntry, "wrap");
                 
-                    revalidate();
-                    repaint();
-                }
-                catch (ExistingClassException e)
-                {
-                    new WarningWindow("Class already exists.");
-                }
+                revalidate();
+                repaint();
+            }
+            catch (ExistingClassException e)
+            {
+                new WarningWindow("Class already exists.");
             }
             catch (NullPointerException exception)
             {

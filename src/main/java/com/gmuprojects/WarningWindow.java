@@ -45,5 +45,9 @@ public class WarningWindow extends JFrame {
         add(mainPanel);
 
         setVisible(true);
+        
+        // Trick to move window to the front.
+        setAlwaysOnTop(true);
+        setAlwaysOnTop(false);
     }
 }

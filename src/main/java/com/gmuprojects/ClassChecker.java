@@ -244,13 +244,13 @@ public class ClassChecker {
             this.classNum = classNum;
             this.classSection = classSection;
 
-            // Initialize display elements.
-            setupPanel(dateCode);
-
             classStatus = ClassStatus.UNCHECKED;
 
             hasValidSection = (classSection != null);
             this.classSection = classSection;
+
+            // Initialize display elements.
+            setupPanel(dateCode);
 
             // Setup query pairs for set search mode.
             @SuppressWarnings("unchecked")
@@ -309,17 +309,24 @@ public class ClassChecker {
             if(classSection == null)
             {
                 classCapacityLabel.setText("Multi-Section");
-                className.setText(classSymbol + " " + classNum);
+                
             }
-            else
-            {
-                className.setText(classSymbol + " " + classNum + "-" + classSection);
-            }
+            className.setText(getClassDisplayName());
 
             mainPanel.add(className, "growx");
             mainPanel.add(classCapacityLabel, "growx");
 
             add(mainPanel);
+        }
+
+        private String getClassDisplayName()
+        {
+            if(hasValidSection)
+            {
+                return classSymbol + " " + classNum + "-" + classSection;
+            }
+
+            return classSymbol + " " + classNum;
         }
 
         /**
@@ -444,6 +451,7 @@ public class ClassChecker {
             if(isAvailable)
             {
                 classStatus = ClassStatus.AVAILABLE;
+                new WarningWindow("Class " + getClassDisplayName() + " is now open!");
             }
             else
             {
