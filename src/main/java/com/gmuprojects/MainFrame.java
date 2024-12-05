@@ -1,11 +1,8 @@
 package com.gmuprojects;
 
-import java.awt.BorderLayout;
-import java.awt.Color;
 import java.awt.Font;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.net.CookieHandler;
 import java.net.CookieManager;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;

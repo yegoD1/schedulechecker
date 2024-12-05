@@ -152,6 +152,14 @@ public class ClassChecker {
      */
     private class ClassEntry extends JPanel
     {
+        // Enum representing all the states a class can be in.
+        private enum ClassStatus
+        {
+            UNAVAILABLE,
+            UNCHECKED,
+            AVAILABLE
+        }
+
         private JPanel mainPanel;
 
         // Status icon that is shown to the left of the entry.
@@ -172,8 +180,8 @@ public class ClassChecker {
         // Class section to track.
         private String classSection;
 
-        // True if class is currently available. False if vise-versa.
-        private boolean classAvailable;
+        // Enum representing the current status of this class.
+        private ClassStatus classStatus;
 
         /**
          * Constructor for ClassEntry. Takes same arguments as {@link ClassChecker#addNewClass(String, String, String, String)};
@@ -184,9 +192,10 @@ public class ClassChecker {
          */
         public ClassEntry(String dateCode, String classSymbol, String classNum, String classSection)
         {
+            // Initialize display elements.
             setupPanel(dateCode, classSymbol, classNum, classSection);
 
-            classAvailable = true;
+            classStatus = ClassStatus.UNCHECKED;
 
             hasValidSection = (classSection != null);
             this.classSection = classSection;
@@ -247,6 +256,7 @@ public class ClassChecker {
             classCapacityLabel = new JLabel("0/0");
             classCapacityLabel.setFont(new Font("Arial", Font.BOLD, 18));
 
+            // Setup capacity label.
             if(classSection == null)
             {
                 classCapacityLabel.setText("Multi-Section");
@@ -269,14 +279,14 @@ public class ClassChecker {
         public void performSearch()
         {
             // First set search mode to setup session.
-            CompletableFuture<HttpResponse<String>> response = httpClient.sendAsync(setSearchRequest, BodyHandlers.ofString());
-            response.thenAccept(result -> classQuerySearch(result));
+            CompletableFuture<HttpResponse<Void>> response = httpClient.sendAsync(setSearchRequest, BodyHandlers.discarding());
+            response.thenAccept(result -> classQuerySearch());
         }
 
         /**
          * Performs query to get class data.
          */
-        private void classQuerySearch(HttpResponse<String> response)
+        private void classQuerySearch()
         {
             CompletableFuture<HttpResponse<String>> queryResponse = httpClient.sendAsync(classSearchRequest, BodyHandlers.ofString());
             queryResponse.thenAccept(result -> updateEntry(result));
@@ -284,7 +294,7 @@ public class ClassChecker {
 
         /**
          * Updates the entry from recieved class lookup.
-         * @param bodyResponse
+         * @param bodyResponse The full body response recieved from http request.
          */
         private void updateEntry(HttpResponse<String> bodyResponse)
         {
@@ -307,11 +317,11 @@ public class ClassChecker {
                         int maxSize = entry.getInt("maximumEnrollment");
                         
                         updateCapacity(seatsTaken, maxSize);
-                        if(seatsTaken < maxSize && !classAvailable)
+                        if(seatsTaken < maxSize && (classStatus == ClassStatus.UNCHECKED || classStatus == ClassStatus.UNAVAILABLE))
                         {
                             changeStatus(true);
                         }
-                        else if(classAvailable)
+                        else if(seatsTaken >= maxSize && (classStatus == ClassStatus.UNCHECKED || classStatus == ClassStatus.AVAILABLE))
                         {
                             changeStatus(false);
                         }
@@ -326,7 +336,7 @@ public class ClassChecker {
                     // Only care about one class that has availability.
                     if(seatsTaken < maxSize)
                     {
-                        if(!classAvailable)
+                        if(classStatus == ClassStatus.UNCHECKED || classStatus == ClassStatus.UNAVAILABLE)
                         {
                             changeStatus(true);
                         }
@@ -336,13 +346,19 @@ public class ClassChecker {
                 }
             }
 
-            if(!hasValidSection && classAvailable)
+            // Multi-class section and there is no more capacity.
+            if(!hasValidSection && (classStatus == ClassStatus.UNCHECKED || classStatus == ClassStatus.AVAILABLE))
             {
                 // No classes were found.
                 changeStatus(false);
             }
         }
 
+        /**
+         * Internal method for updating the current capacity fo this class.
+         * @param takenSeats How many seats are taken up by others.
+         * @param maxSeats The maximum available number of seats.
+         */
         private void updateCapacity(int takenSeats, int maxSeats)
         {
             classCapacityLabel.setText(takenSeats + "/" + maxSeats);
@@ -356,6 +372,7 @@ public class ClassChecker {
         {
             try
             {
+                // Try to update images to correct status.
                 if(isAvailable)
                 {
                     BufferedImage img = ImageIO.read(getClass().getResource("resources/success.png"));
@@ -374,7 +391,15 @@ public class ClassChecker {
                 new WarningWindow(e.toString());
             }
 
-            classAvailable = isAvailable;
+            // Update status.
+            if(isAvailable)
+            {
+                classStatus = ClassStatus.AVAILABLE;
+            }
+            else
+            {
+                classStatus = ClassStatus.UNAVAILABLE;
+            }
         }
     }
 }
