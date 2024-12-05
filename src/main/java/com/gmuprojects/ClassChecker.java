@@ -112,9 +112,15 @@ public class ClassChecker {
      * @param classNum The numbers after the class symbol. For CS 262 it would be <code>262</code>. 
      * @param classSection Optional section to track. For CS 262-001 it would be <code>001</code>.
      * @return JPanel to be added to active class tracked list.
+     * @throws ExistingClassException Happens when there is already a tracked class in the list.
      */
-    public JPanel addNewClass(String dateCode, String classSymbol, String classNum, String classSection)
+    public JPanel addNewClass(String dateCode, String classSymbol, String classNum, String classSection) throws ExistingClassException
     {
+        if(isDuplicateClass(classSymbol, classNum, classSection))
+        {
+            throw new ExistingClassException("Class already exists.");
+        }
+
         ClassEntry classEntry = new ClassEntry(dateCode, classSymbol, classNum, classSection);
 
         // Add to pending jobs.
@@ -129,6 +135,41 @@ public class ClassChecker {
         }
 
         return classEntry;
+    }
+
+    /**
+     * Takes in information for a class and checks if there is a duplicate.
+     * @param classSymbol
+     * @param classNum
+     * @param classSection
+     * @return
+     */
+    private boolean isDuplicateClass(String classSymbol, String classNum, String classSection)
+    {
+        for(ClassEntry currentEntry : jobs)
+        {
+            if(currentEntry.classSymbol.equals(classSymbol) &&
+                currentEntry.classNum.equals(classNum))
+            {
+                if(currentEntry.hasValidSection)
+                {
+                    if(currentEntry.classSection.equals(classSection))
+                    {
+                        return true;
+                    }
+                }
+                else
+                {
+                    // If current entry has no valid section, then incoming classSection must be null to be duplicate to this class.
+                    if(classSection == null)
+                    {
+                        return true;
+                    }
+                }
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -160,6 +201,7 @@ public class ClassChecker {
             AVAILABLE
         }
 
+        // Main JPanel where elements will be added to. Will then be added to this JPanel.
         private JPanel mainPanel;
 
         // Status icon that is shown to the left of the entry.
@@ -177,6 +219,12 @@ public class ClassChecker {
         // True if was supplied with a valid section.
         private boolean hasValidSection;
 
+        // Class symbol to track.
+        private String classSymbol;
+
+        // Class number to track.
+        private String classNum;
+
         // Class section to track.
         private String classSection;
 
@@ -192,8 +240,12 @@ public class ClassChecker {
          */
         public ClassEntry(String dateCode, String classSymbol, String classNum, String classSection)
         {
+            this.classSymbol = classSymbol;
+            this.classNum = classNum;
+            this.classSection = classSection;
+
             // Initialize display elements.
-            setupPanel(dateCode, classSymbol, classNum, classSection);
+            setupPanel(dateCode);
 
             classStatus = ClassStatus.UNCHECKED;
 
@@ -227,11 +279,8 @@ public class ClassChecker {
         /**
          * Sets up the panel for display. For more explanation on parameters, see {@link #ClassEntry}.
          * @param dateCode Date code of this class.
-         * @param classSymbol Symbol of this class
-         * @param classNum The numbers after the class symbol.
-         * @param classSection Optional section to track.
          */
-        public void setupPanel(String dateCode, String classSymbol, String classNum, String classSection)
+        public void setupPanel(String dateCode)
         {
             mainPanel = new JPanel(new MigLayout("fillx"));
 
@@ -350,7 +399,7 @@ public class ClassChecker {
             if(!hasValidSection && (classStatus == ClassStatus.UNCHECKED || classStatus == ClassStatus.AVAILABLE))
             {
                 // No classes were found.
-                changeStatus(false);
+                changeStatus(false); 
             }
         }
 

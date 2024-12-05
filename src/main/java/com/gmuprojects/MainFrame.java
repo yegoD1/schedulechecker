@@ -199,7 +199,7 @@ public class MainFrame extends JFrame{
     /**
      * Called after <code>onTermsRecieved</code> to fill out the dropdown date picker.
      * @param responseArray Array received from terms query.
-     * @see onTermsRecieved
+     * @see {@link MainFrame#onTermsRecieved(HttpResponse)}
      */
     private void fillDatePicker(JSONArray responseArray)
     {
@@ -244,7 +244,7 @@ public class MainFrame extends JFrame{
         @Override
         public String toString()
         {
-            return description;
+            return getDescription();
         }
     }
 
@@ -295,23 +295,29 @@ public class MainFrame extends JFrame{
                     classSec = classSecText.getText();
                 }
 
-                JPanel mainEntry = new JPanel(new MigLayout());
-                
                 // Add to tracker panel (which lists all actively tracked classes).
-                JPanel classTrackerPanel = classChecker.addNewClass(Integer.toString(code.getCode()), classSymbolText.getText(), classNumText.getText(), classSec);
+                try
+                {
+                    JPanel classTrackerPanel = classChecker.addNewClass(Integer.toString(code.getCode()), classSymbolText.getText(), classNumText.getText(), classSec);
+                    JPanel mainEntry = new JPanel(new MigLayout());
 
-                mainEntry.add(classTrackerPanel);
+                    mainEntry.add(classTrackerPanel);
 
-                JButton stopTrackingButton = new JButton("Stop Tracking");
-                stopTrackingButton.addActionListener(new removeClassListener());
+                    JButton stopTrackingButton = new JButton("Stop Tracking");
+                    stopTrackingButton.addActionListener(new removeClassListener());
 
-                mainEntry.add(stopTrackingButton);
+                    mainEntry.add(stopTrackingButton);
 
-                // Add to visible class list.
-                classList.add(mainEntry, "wrap");
+                    // Add to visible class list.
+                    classList.add(mainEntry, "wrap");
                 
-                revalidate();
-                repaint();
+                    revalidate();
+                    repaint();
+                }
+                catch (ExistingClassException e)
+                {
+                    new WarningWindow("Class already exists.");
+                }
             }
             catch (NullPointerException exception)
             {
