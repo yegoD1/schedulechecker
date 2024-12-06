@@ -12,10 +12,9 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 
 import java.net.http.HttpResponse.BodyHandlers;
+import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.Map;
-import java.util.Queue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
@@ -60,7 +59,7 @@ public class ClassChecker {
     private HttpClient httpClient;
 
     // All available class searches to do. A rotating queue.
-    private Queue<ClassEntry> jobs;
+    private ArrayList<ClassEntry> jobs;
 
     // Timer that delays each search request by UPDATE_RATE.
     private Timer taskTimer;
@@ -72,14 +71,15 @@ public class ClassChecker {
     public ClassChecker(HttpClient httpClient)
     {
         this.httpClient = httpClient;
-        jobs = new LinkedList<ClassEntry>();
+        jobs = new ArrayList<>();
+        lastUpdatedEntry = 0;
 
         // Create timer that continually updates every UPDATE_RATE seconds.
         taskTimer = new Timer((int) TimeUnit.SECONDS.toMillis(UPDATE_RATE), new UpdateClass());
         taskTimer.stop();
     }
 
-    private ClassEntry lastUpdatedEntry;
+    private int lastUpdatedEntry;
 
     /**
      * TimerTask that will perform the class searched by UPDATE_RATE seconds.
@@ -88,21 +88,20 @@ public class ClassChecker {
     {
         @Override
         public void actionPerformed(ActionEvent e) {
-            ClassEntry entry = jobs.poll();
-            
+            ClassEntry lastEntry = jobs.get(lastUpdatedEntry);
+
             // Clear last updated entry.
-            lastUpdatedEntry.setBackground(Color.LIGHT_GRAY);
+            lastEntry.setBackground(Color.LIGHT_GRAY);
+
+            // Move to next element to update and make sure to not go out of bounds.
+            lastUpdatedEntry = (lastUpdatedEntry + 1) % jobs.size();
+
+            ClassEntry entry = jobs.get(lastUpdatedEntry);
 
             entry.performSearch();
 
             // Highlight current job that got updated.
             entry.setBackground(new Color(120,120,120));
-
-            // Re-add into queue at end.
-            jobs.add(entry);
-
-            // Entry is now our lasted updated.
-            lastUpdatedEntry = entry;
         }
     }
 
@@ -130,7 +129,6 @@ public class ClassChecker {
         // No jobs were added before until now.
         if(jobs.size() == 1)
         {
-            lastUpdatedEntry = classEntry;
             taskTimer.setInitialDelay(0);
             taskTimer.restart();
         }
@@ -139,11 +137,11 @@ public class ClassChecker {
     }
 
     /**
-     * Takes in information for a class and checks if there is a duplicate.
-     * @param classSymbol
-     * @param classNum
-     * @param classSection
-     * @return
+     * Takes in information for a class and checks if there is a duplicate. Parameters are the
+     * @param classSymbol Class symbol to check.
+     * @param classNum Class number to check.
+     * @param classSection Optinal class section to check.
+     * @return True if there is a duplicate class that is being tracked. False if otherwise.
      */
     private boolean isDuplicateClass(String classSymbol, String classNum, String classSection)
     {
@@ -179,12 +177,15 @@ public class ClassChecker {
      */
     public void removeClass(JPanel classToRemove)
     {
+        // If class is the last updated class, shift back updated entry.
+        lastUpdatedEntry--;
+
         jobs.remove(classToRemove);
 
         // Stop timer if there are no more jobs.
         if(jobs.size() == 0)
         {
-            lastUpdatedEntry = null;
+            lastUpdatedEntry = 0;
             taskTimer.stop();
         }
     }
