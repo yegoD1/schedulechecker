@@ -1,4 +1,4 @@
-package com.gmuprojects;
+package com.yegoD;
 
 /**
  * BasicPair assosciates one key to one value. Great for assosciating two unrelated class types.

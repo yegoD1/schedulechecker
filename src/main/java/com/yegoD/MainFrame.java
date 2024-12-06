@@ -1,4 +1,4 @@
-package com.gmuprojects;
+package com.yegoD;
 
 import java.awt.Font;
 import java.awt.event.ActionEvent;
@@ -194,6 +194,8 @@ public class MainFrame extends JFrame{
         // Enable frame now since dates are loaded.
         setEnabled(true);
         mainPanel.remove(loadingLabel);
+        revalidate();
+        repaint();
     }
 
     /**

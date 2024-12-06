@@ -1,4 +1,4 @@
-package com.gmuprojects;
+package com.yegoD;
 
 import java.awt.Color;
 import java.awt.Font;
@@ -6,6 +6,7 @@ import java.awt.Image;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.image.BufferedImage;
+import java.net.URL;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
@@ -287,7 +288,7 @@ public class ClassChecker {
             // Create loading icon.
             try
             {
-                BufferedImage img = ImageIO.read(getClass().getResource("resources/wait.png"));
+                BufferedImage img = ImageIO.read(getClass().getClassLoader().getResource("wait.png"));
                 Image scaledImg = img.getScaledInstance(60, 60, Image.SCALE_SMOOTH);
 
                 statusIcon = new JLabel(new ImageIcon(scaledImg));
@@ -428,16 +429,27 @@ public class ClassChecker {
         {
             try
             {
+                System.out.println("Working Directory: " + System.getProperty("user.dir"));
+
+                // Let's check if we can find the resource using different methods
+                URL url1 = getClass().getResource("/success.png");
+                URL url2 = getClass().getClassLoader().getResource("success.png");
+                URL url3 = ClassChecker.class.getResource("/success.png");
+
+                System.out.println("Method 1 result: " + url1);
+                System.out.println("Method 2 result: " + url2);
+                System.out.println("Method 3 result: " + url3);
+
                 // Try to update images to correct status.
                 if(isAvailable)
                 {
-                    BufferedImage img = ImageIO.read(getClass().getResource("resources/success.png"));
+                    BufferedImage img = ImageIO.read(getClass().getClassLoader().getResource("success.png"));
                     Image scaledImg = img.getScaledInstance(statusIcon.getWidth(), statusIcon.getHeight(), Image.SCALE_SMOOTH);
                     statusIcon.setIcon(new ImageIcon(scaledImg));
                 }
                 else
                 {
-                    BufferedImage img = ImageIO.read(getClass().getResource("resources/failed.png"));
+                    BufferedImage img = ImageIO.read(getClass().getClassLoader().getResource("failed.png"));
                     Image scaledImg = img.getScaledInstance(statusIcon.getWidth(), statusIcon.getHeight(), Image.SCALE_SMOOTH);
                     statusIcon.setIcon(new ImageIcon(scaledImg));
                 }
