@@ -2,6 +2,7 @@ package com.yegoD;
 
 import java.net.http.HttpRequest;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URLEncoder;
 import java.net.http.HttpRequest.Builder;
 
@@ -27,9 +28,12 @@ public class HttpRequestBuilder {
      * @param headers Array of basic pairs to be sent as headers.
      * @param callType Enum for request type to use.
      * @param body Optinal argument. Creates a URL encoded form body.
-     * @return
+     * @return Completed HttpRequest
+     * @throws IllegalArgumentException Thrown when URL is invalid.
+     * @throws URISyntaxException Thrown when syntax for URL is invalid.
      */
     public static HttpRequest BuildCall(String URL, BasicPair<String,String>[] queries, BasicPair<String, String>[] headers, HttpCallType callType, Map<String, String> body)
+        throws IllegalArgumentException, URISyntaxException
     {
         Builder httpBuilder = HttpRequest.newBuilder();
         StringBuilder strBuilder = new StringBuilder(URL);
@@ -48,15 +52,8 @@ public class HttpRequestBuilder {
             strBuilder.deleteCharAt(strBuilder.length()-1);
         }
 
-        try{
-            httpBuilder.uri(new URI(strBuilder.toString()));
-        }
-        catch(Exception e)
-        {
-            
-        }
+        httpBuilder.uri(new URI(strBuilder.toString()));
         
-
         if(headers != null)
         {
             for(BasicPair<String,String> curHeader : headers)

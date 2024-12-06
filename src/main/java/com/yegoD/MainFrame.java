@@ -36,7 +36,7 @@ public class MainFrame extends JFrame{
     private static final String TERM_URL = "https://ssbstureg.gmu.edu/StudentRegistrationSsb/ssb/classSearch/getTerms";
 
     // HttpRequest object to be used when querying for available class terms.
-    private static final HttpRequest TERM_REQUEST;
+    private static HttpRequest TERM_REQUEST;
 
     static{
         // Constructs reusable header pairs to be sent with every request.
@@ -51,7 +51,14 @@ public class MainFrame extends JFrame{
         termQueryPairs[0] = new BasicPair<String,String>("offset", "1");
         termQueryPairs[1] = new BasicPair<String,String>("max", "10");
 
-        TERM_REQUEST = HttpRequestBuilder.BuildCall(TERM_URL, termQueryPairs, headerPairs, HttpCallType.GET, null);
+        try
+        {
+            TERM_REQUEST = HttpRequestBuilder.BuildCall(TERM_URL, termQueryPairs, headerPairs, HttpCallType.GET, null);
+        }
+        catch(Exception e)
+        {
+            new WarningWindow(e.toString());
+        }
     }
 
     // Main panel for this application.
@@ -286,11 +293,17 @@ public class MainFrame extends JFrame{
 
     /**
      * Checks if given String number is valid. Must only contain numbers.
+     * Used in checking class number and section.
      * @param number Number to validate.
      * @return True if number contains only numbers.
      */
     private boolean isValidNum(String number)
     {
+        if(number.length() != 3)
+        {
+            return false;
+        }
+
         for (int i = 0; i < number.length(); i++) 
         {
             char currentChar = number.charAt(i);
@@ -329,7 +342,7 @@ public class MainFrame extends JFrame{
 
             if(!isValidNum(classNumText.getText()))
             {
-                new WarningWindow("Class number is invalid. It should only contain numbers.");
+                new WarningWindow("Class number is invalid. It should only contain three numbers.");
                 return;
             }
 

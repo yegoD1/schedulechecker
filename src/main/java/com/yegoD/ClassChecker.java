@@ -6,7 +6,6 @@ import java.awt.Image;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.image.BufferedImage;
-import java.net.URL;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
@@ -61,6 +60,9 @@ public class ClassChecker {
     // All available class searches to do. A rotating queue.
     private ArrayList<ClassEntry> jobs;
 
+    // Index of the last updated entry in jobs.
+    private int lastUpdatedEntry;
+
     // Timer that delays each search request by UPDATE_RATE.
     private Timer taskTimer;
 
@@ -78,8 +80,6 @@ public class ClassChecker {
         taskTimer = new Timer((int) TimeUnit.SECONDS.toMillis(UPDATE_RATE), new UpdateClass());
         taskTimer.stop();
     }
-
-    private int lastUpdatedEntry;
 
     /**
      * TimerTask that will perform the class searched by UPDATE_RATE seconds.
@@ -262,8 +262,6 @@ public class ClassChecker {
             // Must also be sent a body with date user wants to search in.
             Map<String, String> body = new HashMap<String, String>();
             body.put("term", dateCode);
-    
-            setSearchRequest = HttpRequestBuilder.BuildCall(SETSEARCH_URL, setSearchQueryPairs, HEADER_PAIRS, HttpCallType.POST, body);
 
             @SuppressWarnings("unchecked")
             BasicPair<String, String>[] queries = new BasicPair[7];
@@ -275,7 +273,15 @@ public class ClassChecker {
             queries[5] = new BasicPair<String,String>("sortColumn", "subjectDescription");
             queries[6] = new BasicPair<String,String>("sortDirection", "asc");
 
-            classSearchRequest = HttpRequestBuilder.BuildCall(COURSESEARCH_URL, queries, HEADER_PAIRS, HttpCallType.GET, null);
+            try
+            {
+                setSearchRequest = HttpRequestBuilder.BuildCall(SETSEARCH_URL, setSearchQueryPairs, HEADER_PAIRS, HttpCallType.POST, body);
+                classSearchRequest = HttpRequestBuilder.BuildCall(COURSESEARCH_URL, queries, HEADER_PAIRS, HttpCallType.GET, null);
+            }
+            catch(Exception e)
+            {
+                new WarningWindow(e.toString());
+            }
         }
 
         /**
@@ -431,15 +437,6 @@ public class ClassChecker {
             try
             {
                 System.out.println("Working Directory: " + System.getProperty("user.dir"));
-
-                // Let's check if we can find the resource using different methods
-                URL url1 = getClass().getResource("/success.png");
-                URL url2 = getClass().getClassLoader().getResource("success.png");
-                URL url3 = ClassChecker.class.getResource("/success.png");
-
-                System.out.println("Method 1 result: " + url1);
-                System.out.println("Method 2 result: " + url2);
-                System.out.println("Method 3 result: " + url3);
 
                 // Try to update images to correct status.
                 if(isAvailable)
