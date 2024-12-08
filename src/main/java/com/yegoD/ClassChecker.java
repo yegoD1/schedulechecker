@@ -327,6 +327,10 @@ public class ClassChecker {
             add(mainPanel);
         }
 
+        /**
+         * Gets the display name of this class to be used for the UI.
+         * @return String that represents this class.
+         */
         private String getClassDisplayName()
         {
             if(hasValidSection)

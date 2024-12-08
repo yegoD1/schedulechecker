@@ -334,6 +334,35 @@ public class MainFrame extends JFrame{
     }
 
     /**
+     * Checks if given section string is a valid section. Must only contain three numbers or
+     * two letters and a number (DL1 for example).
+     * @param section Section string to check.
+     * @return True if given section is valid. False if otherwise.
+     */
+    private boolean isValidSection(String section)
+    {
+        if(section.length() != 3)
+        {
+            return false;
+        }
+
+        // First check if it contains only numbers.
+        if(isValidNum(section))
+        {
+            return true;
+        }
+
+        // If not, this means it is an online class. First two characters should be a letter with the last one being a number.
+        if(Character.isLetter(section.charAt(0)) && Character.isLetter(section.charAt(1)) &&
+            Character.isDigit(section.charAt(2)))
+        {
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
      * ActionListener that is called whenever the user wants to add a class to be tracked.
      */
     private class addClassListener implements ActionListener
@@ -373,10 +402,11 @@ public class MainFrame extends JFrame{
                 // Keep classSec null if there is no text.
                 if(!classSecText.getText().isEmpty())
                 {
-                    classSec = classSecText.getText();
-                    if(!isValidNum(classSec))
+                    // Convert to uppercase just in case user does not put online section in all uppercase.
+                    classSec = classSecText.getText().toUpperCase();
+                    if(!isValidSection(classSec))
                     {
-                        new WarningWindow("Class section is invalid. It should only contain numbers.");
+                        new WarningWindow("Class section is invalid. It should only contain numbers or DL[1,2,3...].");
                         return;
                     }
                 }
