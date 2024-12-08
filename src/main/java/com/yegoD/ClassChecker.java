@@ -88,7 +88,18 @@ public class ClassChecker {
     {
         @Override
         public void actionPerformed(ActionEvent e) {
-            ClassEntry lastEntry = jobs.get(lastUpdatedEntry);
+            ClassEntry lastEntry;
+            
+            if(lastUpdatedEntry < 0)
+            {
+                // User removed many classes at the front of the list.
+                lastEntry = jobs.get(0);
+                lastUpdatedEntry = -1;
+            }
+            else
+            {
+                lastEntry = jobs.get(lastUpdatedEntry);
+            }
 
             // Clear last updated entry.
             lastEntry.setBackground(Color.LIGHT_GRAY);

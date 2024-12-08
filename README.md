@@ -46,3 +46,5 @@ This Java project is built using Maven. The build targets Java 17.
 This program used the following dependencies:
 - **MiGLayout** - Copyright 2024 Mikael Grev https://github.com/mikaelgrev/miglayout
 - **JSON-java** - Public Domain https://github.com/stleary/JSON-java
+# Icons
+Status icons by https://icons8.com/
