@@ -8,8 +8,9 @@ Must have at least Java 17 or higher in order to run the program. ***You have to
 This happens when the website certificate is not added to Java's keytool. You can add it by following the steps below:
 ### Getting the Certificate
 **There is a certificate bundled with each release in case you do not want to manually download it. If you downloaded it through those means, skip to [Installing the Certificate](#installing-the-certificate)**\
+
 Navigate to this link in your browser:
-https://ssbstureg.gmu.edu/StudentRegistrationSsb/ssb/registration\
+https://ssbstureg.gmu.edu/StudentRegistrationSsb/ssb/registration \
 Below are step-by-step instructions specific for your web browser in order to download the certificate onto your computer.
 #### Chrome
 1. Select the small options button that is to the left of the URL.
@@ -26,7 +27,8 @@ Below are step-by-step instructions specific for your web browser in order to do
 2. Click on "Show Certificate"
 3. Click and drag the certificate icon and drag it to a finder window or the desktop.
 ### Installing the Certificate
-After you have downloaded the certificate, you must must open a terminal window and CD to your folder that you downloaded the file. Below are the commands if you downloaded it into your computer's "Downloads" folder. Make sure to change the `-storepass` argument to a different password if you changed the keystore password.
+After you have downloaded the certificate, you must must open a terminal window and CD to your folder that you downloaded the file. Below are the commands if you downloaded it into your computer's "Downloads" folder. Make sure to change the `-storepass` argument to a different password if you changed the keystore password.\
+**Copy each line and run one at a time.**
 ```shell
 cd Downloads
 $JAVA_HOME/bin/keytool -importcert -alias GMUScheduler -cacerts -file ssbstureg-gmu-edu.pem -storepass changeit
