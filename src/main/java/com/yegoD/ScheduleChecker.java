@@ -9,7 +9,7 @@ import javax.swing.WindowConstants;
 /**
  * Main class that gets ran upon program start.
  */
-public class Core {
+public class ScheduleChecker {
 
     // Main frame for this application.
     private static JFrame mainFrame;

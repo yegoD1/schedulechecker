@@ -436,8 +436,6 @@ public class ClassChecker {
         {
             try
             {
-                System.out.println("Working Directory: " + System.getProperty("user.dir"));
-
                 // Try to update images to correct status.
                 if(isAvailable)
                 {

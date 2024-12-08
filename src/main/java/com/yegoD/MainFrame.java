@@ -155,7 +155,7 @@ public class MainFrame extends JFrame{
         classDatePicker = new JComboBox<ClassDateCode>();
         classDatePicker.setEditable(false);
 
-        mainPanel.add(classDatePicker);
+        mainPanel.add(classDatePicker, "width 100:125:200");
 
         JLabel classNameLabel = new JLabel("Class Symbol:");
         classSymbolText = new JTextField();
@@ -187,6 +187,18 @@ public class MainFrame extends JFrame{
 
         classScrollPane = new JScrollPane(classList);
         mainPanel.add(classScrollPane, "growx, span");
+
+        JButton aboutButton = new JButton("About");
+        aboutButton.addActionListener(new aboutButtonListener());
+        mainPanel.add(aboutButton, centerConstraint);
+    }
+    
+    private class aboutButtonListener implements ActionListener
+    {
+        @Override
+        public void actionPerformed(ActionEvent e) {
+            new AboutWindow().setVisible(true);
+        }
     }
 
     /**
@@ -223,6 +235,11 @@ public class MainFrame extends JFrame{
             {
                 classDatePicker.addItem(new ClassDateCode(codeValue, description));
             }
+        }
+
+        if(classDatePicker.getItemCount() > 0)
+        {
+            classDatePicker.setSelectedIndex(0);
         }
     }
 
