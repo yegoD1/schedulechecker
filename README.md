@@ -31,16 +31,19 @@ After you have downloaded the certificate, you must must open a terminal window 
 **Copy each line and run one at a time.**
 ```shell
 cd Downloads
-$JAVA_HOME/bin/keytool -importcert -alias GMUScheduler -cacerts -file ssbstureg-gmu-edu.pem -storepass changeit
+$JAVA_HOME/bin/keytool -importcert -alias ClassScheduler -cacerts -file ssbstureg-gmu-edu.pem -storepass changeit
 yes
 ```
 If there are no errors, you should get `Certificate was added to keystore`.
 ## Removing the Certificate
 If you are no longer using the tool, you can remove the certificate from the keytool with the following command. Make sure to change the `-storepass` argument to a different password if you changed the keystore password.
 ```shell 
-keytool -delete -alias GMUScheduler -cacerts -storepass changeit
+keytool -delete -alias ClassScheduler -cacerts -storepass changeit
 ```
-# Building
+# How to Use
+This tool can alert you when an opening is discovered for your classes. You first must check on the class scheduling website and then copy the class symbol, number, and section. If you would like keep tracking for any class regardless of section, you can leave that field empty.\
+**You have to keep the program open in order for classes to be actively checked.**
+# Building the Project
 This Java project is built using Maven. The build targets Java 17.
 # Open Source Dependencies
 This program used the following dependencies:

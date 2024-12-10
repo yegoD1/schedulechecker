@@ -201,19 +201,19 @@ public class ClassChecker {
         }
     }
 
+    // Enum representing all the states a class can be in.
+    private enum ClassStatus
+    {
+        UNAVAILABLE,
+        UNCHECKED,
+        AVAILABLE
+    }
+
     /**
      * ClassEntry is a JPanel used display one tracked entry.
      */
     private class ClassEntry extends JPanel
     {
-        // Enum representing all the states a class can be in.
-        private enum ClassStatus
-        {
-            UNAVAILABLE,
-            UNCHECKED,
-            AVAILABLE
-        }
-
         // Main JPanel where elements will be added to. Will then be added to this JPanel.
         private JPanel mainPanel;
 
