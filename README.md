@@ -3,7 +3,7 @@ A simple tool written in Java that allows students at GMU to know whether any of
 It will periodically check each requested class and alert the user once there is an opening. **This is inteded to be used for classes that do not have a waitlist.**
 
 # Setup
-Must have at least Java 17 or higher in order to run the program. ***You have to add the GMU website certificate to the Java keytool, which is described [here](#adding-the-certificatecertificate-not-added-to-keytool-warning-or-constantly-loading) or by running `addToKeytoolMac.command` or `addToKeytoolWindows.bat`.*** The certificate is needed in order for the program to make HTTP requests.
+Must have at least Java 17 or higher in order to run the program. ***You have to add the GMU website certificate to the Java keytool, which is described [here](#adding-the-certificatecertificate-not-added-to-keytool-warning-or-constantly-loading) or by running `addToKeytoolMac.command` or `addToKeytoolWindows.bat` as administrator.*** The certificate is needed in order for the program to make HTTP requests.
 
 # How to Use
 This tool can alert you when an opening is discovered for your classes. **You should launch the jar file through running `launchJarMac.command` or `launchJarWindows.bat`.**\
@@ -66,7 +66,7 @@ Then type "yes" (without quotations).
 If there are no errors, you should get `Certificate was added to keystore`.
 
 ## Removing the Certificate
-If you are no longer using the tool, you can remove the certificate from the keytool with the following command. Make sure to change the `-storepass` argument to a different password if you changed the keystore password.
+If you are no longer using the tool, you can remove the certificate from the keytool with the following command or with `removeFromKeytoolMac.command` or `removeFromKeytoolWindows.bat` as administrator. Make sure to change the `-storepass` argument to a different password if you changed the keystore password.
 ```shell 
 keytool -delete -alias ClassScheduler -cacerts -storepass changeit
 ```
