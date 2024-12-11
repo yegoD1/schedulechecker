@@ -296,6 +296,12 @@ public class MainFrame extends JFrame{
      */
     private boolean isValidClassSymbol(String classSymbol)
     {
+        // Prevent overly long class symbols.
+        if(classSymbol.length() > 6)
+        {
+            return false;
+        }
+
         for (int i = 0; i < classSymbol.length(); i++) 
         {
             char currentChar = classSymbol.charAt(i);
