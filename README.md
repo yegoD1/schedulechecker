@@ -7,7 +7,7 @@ Must have at least Java 17 or higher in order to run the program. ***You have to
 
 # How to Use
 This tool can alert you when an opening is discovered for your classes. **You should launch the jar file through running `launchJarMac.command` or `launchJarWindows.bat`.**\
-You first must check on the class scheduling website and then copy the class symbol, number, and section. If you would like keep tracking for any class regardless of section, you can leave that field empty.\
+You first must check on the class scheduling website and then copy the class symbol, number, and section. If you would like to keep tracking for any class regardless of section, you can leave that field empty.\
 **You have to keep the program open in order for classes to be actively checked.**
 
 ## Adding the Certificate/"Certificate not added to keytool" Warning or Constantly Loading
