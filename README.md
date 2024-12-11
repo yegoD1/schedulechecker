@@ -1,5 +1,5 @@
 # Schedule Checker
-A simple tool written in Java that allows students at GMU to know whether any of their desired classes open up for registration. 
+A simple tool written in Java that allows students at GMU to know whether any of their desired classes open up for registration. **You can download the latest release [here](https://github.com/yegoD1/schedulechecker/releases/latest).**
 It will periodically check each requested class and alert the user once there is an opening. **This is inteded to be used for classes that do not have a waitlist.**
 
 # Setup
